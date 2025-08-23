@@ -1,34 +1,9 @@
-import React, { useState, useMemo } from "react";
-import {
-  Checkbox,
-  IconButton,
-  Switch,
-} from "@mui/material";
+import React, { useState, useMemo, useEffect } from "react";
+import { Checkbox, IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FilterListIcon from "@mui/icons-material/FilterList";
-
-// Sample rows
-function createData(id, name, calories, fat, carbs, protein) {
-  return { id, name, calories, fat, carbs, protein };
-}
-
-const rows = [
-  createData(1, "Cupcake", 305, 3.7, 67, 4.3),
-  createData(2, "Donut", 452, 25.0, 51, 4.9),
-  createData(3, "Eclair", 262, 16.0, 24, 6.0),
-  createData(4, "Frozen yoghurt", 159, 6.0, 24, 4.0),
-  createData(5, "Gingerbread", 356, 16.0, 49, 3.9),
-  createData(6, "Cheesecake", 400, 20.0, 55, 6.5),
-  createData(7, "Brownie", 320, 18.0, 40, 5.1),
-  createData(8, "Apple Pie", 300, 12.0, 42, 2.8),
-  createData(9, "Ice Cream", 275, 14.0, 30, 3.6),
-  createData(10, "Pudding", 250, 10.0, 28, 3.2),
-  createData(11, "Muffin", 380, 15.0, 48, 4.7),
-  createData(12, "Tart", 290, 13.0, 36, 3.4),
-  createData(13, "Macaron", 220, 9.0, 25, 2.0),
-  createData(14, "Croissant", 450, 21.0, 50, 5.0),
-  createData(15, "Strudel", 330, 17.0, 44, 4.1),
-];
+import { API_URL } from "../assets/URLs";
+import axios from "axios";
 
 // Comparator functions
 function descendingComparator(a, b, orderBy) {
@@ -44,18 +19,43 @@ function getComparator(order, orderBy) {
 }
 
 const UserTable = () => {
+  const [rows, setRows] = useState([]);
   const [order, setOrder] = useState("asc");
   const [orderBy, setOrderBy] = useState("calories");
   const [selected, setSelected] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
+  // Fetch API data
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const res = await axios.get(API_URL);
+        const body = JSON.parse(res.data.body);
+
+        const formatted = body.map((item) => ({
+          id: Number(item.id.N),
+          name: item.name.S,
+          calories: Number(item.calories.N),
+          fat: Number(item.fat.N),
+          carbs: Number(item.carbs.N),
+          protein: Number(item.protein.N),
+        }));
+
+        setRows(formatted);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    };
+    getData();
+  }, []);
+
   const visibleRows = useMemo(
     () =>
       [...rows]
         .sort(getComparator(order, orderBy))
         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [order, orderBy, page, rowsPerPage]
+    [rows, order, orderBy, page, rowsPerPage]
   );
 
   const handleSelectAllClick = (e) => {
@@ -78,6 +78,27 @@ const UserTable = () => {
     setOrderBy(property);
   };
 
+  // ✅ Delete selected rows
+  const handleDelete = async () => {
+    try {
+      await Promise.all(
+        selected.map((id) =>
+          axios.delete(API_URL, {
+            headers: { "Content-Type": "application/json" },
+            data: { id }, // DELETE body
+          })
+        )
+      );
+
+      // Remove deleted items from UI
+      setRows((prev) => prev.filter((row) => !selected.includes(row.id)));
+      setSelected([]);
+    } catch (err) {
+      console.error("Error deleting items:", err);
+    }
+  };
+
+
   return (
     <div className="w-4/5 mx-auto mt-15">
       {/* Toolbar */}
@@ -89,7 +110,7 @@ const UserTable = () => {
         )}
         <div>
           {selected.length > 0 ? (
-            <IconButton>
+            <IconButton onClick={handleDelete}>
               <DeleteIcon className="text-red-600" />
             </IconButton>
           ) : (
@@ -107,9 +128,7 @@ const UserTable = () => {
             <th className="p-3">
               <Checkbox
                 color="primary"
-                indeterminate={
-                  selected.length > 0 && selected.length < rows.length
-                }
+                indeterminate={selected.length > 0 && selected.length < rows.length}
                 checked={rows.length > 0 && selected.length === rows.length}
                 onChange={handleSelectAllClick}
               />
@@ -193,7 +212,6 @@ const UserTable = () => {
           </button>
         </div>
       </div>
-
     </div>
   );
 };

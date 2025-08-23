@@ -92,7 +92,7 @@ const NavBar = () => {
 
             </Drawer>
 
-          <span className="hidden sm:block font-semibold text-lg">Gallery</span>
+          <span className="hidden sm:block font-semibold text-lg">Nutrio Track</span>
         </div>
 
         {/* Search */}
