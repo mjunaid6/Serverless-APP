@@ -1,11 +1,12 @@
-import { useState } from 'react'
 import './App.css'
-import Box from '@mui/material/Box';
+import NavBar from './Component/NavBar'
+import UserTable from './Component/UsersTable'
 
 function App() {
   return (
     <>
-      
+      <NavBar/>
+      <UserTable/>
     </>
   )
 }
